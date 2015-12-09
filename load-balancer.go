@@ -15,21 +15,10 @@ var filter string = "dummy"
 var monitor string = "http://cadvisor:8080"
 var port string = ":7500"
 
-// The function will query cAdvisor for all the containers running with him
-func getLessLoaded(name string) string {
-	client, err := client.NewClient(name)
+// determine the container with the more available RAM
+func getLessLoaded(cadvisor string) string {
 
-	if err != nil {
-		log.Println(err)
-	}
-
-	request := info.DefaultContainerInfoRequest()
-
-	allContainers, err := client.AllDockerContainers(&request)
-
-	if err != nil {
-		log.Println(err)
-	}
+	allContainers := getAllContainerInfo(cadvisor)
 
 	var alias, ret string
 	var kbFree uint64
@@ -41,10 +30,9 @@ func getLessLoaded(name string) string {
 
 		tabContainers[alias] = kbFree
 	}
-	ret = alias
+	ret = alias // for later comparison
 
 	for key, _ := range tabContainers {
-		//fmt.Printf("%s -> %d\n", key, value)
 
 		// verifying only wanted containers
 		if strings.Contains(key, filter) {
@@ -85,6 +73,25 @@ func handleRedirect(w http.ResponseWriter, r *http.Request) {
 	lessLoaded = "http://" + address[0]
 
 	http.Redirect(w, r, lessLoaded, 307)
+}
+
+func getAllContainerInfo(cadvisor string) []info.ContainerInfo {
+
+	client, err := client.NewClient(cadvisor)
+	printError(err)
+
+	request := info.DefaultContainerInfoRequest()
+	allContainers, err := client.AllDockerContainers(&request)
+	printError(err)
+
+	return allContainers
+}
+
+func printError(err error) {
+
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func main() {
