@@ -1,12 +1,11 @@
 package main
 
 import (
-	"github.com/google/cadvisor/client"
-
 	info "github.com/google/cadvisor/info/v1"
 
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"github.com/google/cadvisor/client"
 	"log"
 	"net/http"
 	"strings"
@@ -14,13 +13,16 @@ import (
 
 var filter string = "dummy"
 var monitor string = "http://cadvisor:8080"
-var middleware string = "http://middleware:9090/request/"
-var port string = ":7000"
+var port string = ":9999"
 
 // determine the container with the more available RAM
-func getLessLoaded() string {
+func getLessLoaded() (string, error) {
 
-	allContainers := getAllContainerInfo(monitor)
+	allContainers, err := getAllContainerInfo(monitor)
+
+	if detectError(err, false) {
+		return "", err
+	}
 
 	var alias, ret string
 	var kbFree uint64
@@ -55,62 +57,48 @@ func getLessLoaded() string {
 		}
 	}
 
-	return ret
-}
-
-func handleView(w http.ResponseWriter, r *http.Request) {
-	log.Println("GET vue")
-	w.Write([]byte(getLessLoaded()))
+	if ret == "" {
+		return "", errors.New("No server found...")
+	}
+	return ret, nil
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
-	log.Println("GET racine")
-	w.Write([]byte("Hello World !"))
+	log.Println("GET vue")
+	server, err := getLessLoaded()
+	log.Println("got server : ", server)
+
+	if detectError(err, false) {
+		w.WriteHeader(500) //warn the user that the server encountered a problem
+	} else {
+		w.WriteHeader(200)
+	}
+
+	w.Write([]byte(server))
 }
 
-func handleRedirect(w http.ResponseWriter, r *http.Request) {
-	log.Println("GET redirige")
-
-	lessLoaded := getLessLoaded()
-	resp := askMiddleware(lessLoaded)
-	w.Write(resp)
-}
-
-func getAllContainerInfo(cadvisor string) []info.ContainerInfo {
+func getAllContainerInfo(cadvisor string) ([]info.ContainerInfo, error) {
 
 	client, err := client.NewClient(cadvisor)
-	if detectError(err) {
-		return nil
+	if detectError(err, true) {
+		return nil, err
 	}
 
 	request := info.DefaultContainerInfoRequest()
 	allContainers, err := client.AllDockerContainers(&request)
-	if detectError(err) {
-		return nil
+	if detectError(err, true) {
+		return nil, err
 	}
 
-	return allContainers
+	return allContainers, nil
 }
 
-func askMiddleware(server string) []byte {
-
-	resp, err := http.Get(middleware + server)
-
-	if detectError(err) == false {
-
-		defer resp.Body.Close()
-		content, err := ioutil.ReadAll(resp.Body)
-		detectError(err)
-		return content
-	}
-
-	return nil
-}
-
-func detectError(err error) bool {
+func detectError(err error, doLog bool) bool {
 
 	if err != nil {
-		log.Println(err)
+		if doLog {
+			log.Println(err)
+		}
 		return true
 	} else {
 		return false
@@ -120,10 +108,6 @@ func detectError(err error) bool {
 func main() {
 
 	http.HandleFunc("/", handleRoot)
-
-	http.HandleFunc("/view", handleView)
-
-	http.HandleFunc("/redirect", handleRedirect)
 
 	fmt.Println("Listening on http://127.0.0.1" + port)
 	log.Fatal(http.ListenAndServe(port, nil))
