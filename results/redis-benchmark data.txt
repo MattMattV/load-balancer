@@ -1,0 +1,33 @@
+using encapsulation
+PING_INLINE: 15898.25 requests per second
+PING_BULK  : 19368.58 requests per second
+SET        : 18112.66 requests per second
+GET        : 14562.40 requests per second
+INCR       : 10053.28 requests per second
+LPUSH      : 12475.05 requests per second
+LPOP       : 9774.22 requests per second
+SADD       : 8969.41 requests per second
+SPOP       : 8441.67 requests per second
+LPUSH      : 7735.15 requests per second
+LRANGE_100 : 3073.80 requests per second
+LRANGE_300 : 1329.65 requests per second
+LRANGE_500 : 6154.22 requests per second
+LRANGE_600 : 6041.57 requests per second
+MSET       : 5249.34 requests per second
+
+withiut encapsulation
+PING_INLINE: 62932.66 requests per second
+PING_BULK  : 59417.71 requests per second
+SET        : 52410.90 requests per second
+GET        : 55309.73 requests per second
+INCR       : 54377.38 requests per second
+LPUSH      : 59988.00 requests per second
+LPOP       : 55157.20 requests per second
+SADD       : 58105.75 requests per second
+SPOP       : 59382.42 requests per second
+LPUSH      : 61538.46 requests per second
+LRANGE_100 : 10341.26 requests per second
+LRANGE_300 : 4176.76 requests per second
+LRANGE_500 : 2287.02 requests per second
+LRANGE_600 : 1754.79 requests per second
+MSET       : 30684.26 requests per second

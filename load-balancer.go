@@ -1,19 +1,19 @@
 package main
 
 import (
-	info "github.com/google/cadvisor/info/v1"
-
 	"errors"
-	"fmt"
 	"github.com/google/cadvisor/client"
+	info "github.com/google/cadvisor/info/v1"
+	"io"
 	"log"
-	"net/http"
+	"net"
+	"runtime"
 	"strings"
 )
 
 var filter string = "dummy"
 var monitor string = "http://cadvisor:8080"
-var port string = ":9999"
+var port string = ":6666"
 
 // determine the container with the more available RAM
 func getLessLoaded() (string, error) {
@@ -63,20 +63,6 @@ func getLessLoaded() (string, error) {
 	return ret, nil
 }
 
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	log.Println("GET vue")
-	server, err := getLessLoaded()
-	log.Println("got server : ", server)
-
-	if detectError(err, false) {
-		w.WriteHeader(500) //warn the user that the server encountered a problem
-	} else {
-		w.WriteHeader(200)
-	}
-
-	w.Write([]byte(server))
-}
-
 func getAllContainerInfo(cadvisor string) ([]info.ContainerInfo, error) {
 
 	client, err := client.NewClient(cadvisor)
@@ -97,7 +83,7 @@ func detectError(err error, doLog bool) bool {
 
 	if err != nil {
 		if doLog {
-			log.Println(err)
+			log.Println("LOG: ", err)
 		}
 		return true
 	} else {
@@ -105,10 +91,38 @@ func detectError(err error, doLog bool) bool {
 	}
 }
 
+// will attempt to encapsulate all the TCP traffic by linking the sockets together
+func forwarding(client net.Conn) {
+
+	lessLoaded, err := getLessLoaded()
+	detectError(err, true)
+
+	target, err := net.Dial("tcp", lessLoaded+":6379")
+	detectError(err, true)
+
+	//copying the client Writer to the target Reader
+	go func() {
+		_, err := io.Copy(target, client)
+		detectError(err, true)
+	}()
+
+	//copying the client Reader to the target Writer
+	go func() {
+		_, err := io.Copy(client, target)
+		detectError(err, true)
+	}()
+}
+
 func main() {
 
-	http.HandleFunc("/", handleRoot)
+	log.Println("Listening on http://127.0.0.1" + port)
+	ln, err := net.Listen("tcp", port)
+	detectError(err, true)
 
-	fmt.Println("Listening on http://127.0.0.1" + port)
-	log.Fatal(http.ListenAndServe(port, nil))
+	for {
+		conn, err := ln.Accept()
+		log.Println("Accept? ", err)
+		go forwarding(conn)
+		log.Println("nb goroutines : ", runtime.NumGoroutine())
+	}
 }
