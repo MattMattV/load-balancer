@@ -5,68 +5,81 @@ import (
 
 	"errors"
 	"fmt"
-	"github.com/google/cadvisor/client"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/google/cadvisor/client"
+	"time"
 )
 
-var filter string = "dummy"
-var monitor string = "http://cadvisor:8080"
-var port string = ":9999"
+var filter string = "dummy"                  //the name of the servers the clients want to contact
+var monitor string = "http://127.0.0.1:8080" // URL where the cAdvisor container is
+var port string = ":6666"                    // port we will listen on
+var mapContainers = make(map[string]uint64)
 
-// determine the container with the more available RAM
-func getLessLoaded() (string, error) {
+func updateContainers() {
 
-	allContainers, err := getAllContainerInfo(monitor)
+	listContainers()
 
-	if detectError(err, false) {
-		return "", err
+	for _ = range time.Tick(5 * time.Second) {
+		log.Println("Starting list of containers update...")
+		listContainers()
+		log.Println("Found", len(mapContainers), "containers")
+		log.Println("Done.\n")
 	}
+}
 
-	var alias, ret string
+func listContainers() {
+
+	allContainers, _ := getAllContainerInfo(monitor)
+
+	var alias string
 	var kbFree uint64
 
-	// will contain for each container name, its available RAM
-	mapContainers := make(map[string]uint64)
+	// resetting mapContainers
+	for key, _ := range mapContainers {
+		delete(mapContainers, key)
+	}
 
 	for _, item := range allContainers {
 		alias = item.Aliases[0]
 		kbFree = item.Stats[0].Memory.Usage
 
-		mapContainers[alias] = kbFree
+		if strings.Contains(alias, filter) {
+			mapContainers[alias] = kbFree
+		}
 	}
+}
 
-	var isItemFound bool = false
+// determine the container with the more available RAM
+func getLessLoaded() (string, error) {
+
+	var lessLoaded string
+
+	for key, _ := range mapContainers {
+		lessLoaded = key
+		break
+	}
 
 	for key, _ := range mapContainers {
 
-		// finding the first container to look for the next comparison
-		if isItemFound == false {
-			if strings.Contains(key, filter) {
-				ret = key
-				isItemFound = true
-			}
-		}
-
 		// verifying only wanted containers
-		if strings.Contains(key, filter) {
-			if mapContainers[key] < mapContainers[ret] {
-				ret = key
-			}
+		if mapContainers[key] < mapContainers[lessLoaded] {
+			lessLoaded = key
 		}
 	}
 
-	if ret == "" {
+	if lessLoaded == "" {
 		return "", errors.New("No server found...")
 	}
-	return ret, nil
+	return lessLoaded, nil
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	log.Println("GET vue")
 	server, err := getLessLoaded()
-	log.Println("got server : ", server)
+	log.Println("chose server : ", server)
 
 	if detectError(err, false) {
 		w.WriteHeader(500) //warn the user that the server encountered a problem
@@ -106,6 +119,8 @@ func detectError(err error, doLog bool) bool {
 }
 
 func main() {
+
+	go updateContainers()
 
 	http.HandleFunc("/", handleRoot)
 
