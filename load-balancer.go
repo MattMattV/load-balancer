@@ -10,13 +10,15 @@ import (
 	"strings"
 
 	"github.com/google/cadvisor/client"
+	"os"
 	"sync"
 	"time"
 )
 
-var filter = "dummy"                 //the name of the servers the clients want to contact
-var monitor = "http://cadvisor:8080" // URL where the cAdvisor container is
-var port = ":6666"                   // port we will listen on
+// monitor : URL where the cAdvisor container is
+// filter  : the name of the servers the clients want to contact
+// port    : port we will listen on
+var filter, monitor, port string
 var mapContainers = make(map[string]uint64)
 var mutex sync.Mutex
 
@@ -120,6 +122,21 @@ func detectError(err error, doLog bool) bool {
 }
 
 func main() {
+
+	filter = os.Getenv("FILTER")
+	monitor = os.Getenv("MONITOR")
+	port = os.Getenv("HTTP_PORT")
+
+	if filter == "" {
+		log.Fatalln("FILTER environment variable is missing")
+	}
+	if monitor == "" {
+		log.Fatalln("MONITOR environment variable is missing")
+	}
+
+	if port == "" {
+		log.Fatalln("HTTP_PORT environment variable is missing")
+	}
 
 	go updateContainers()
 
