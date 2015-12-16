@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-var filter string = "dummy"                  //the name of the servers the clients want to contact
-var monitor string = "http://127.0.0.1:8080" // URL where the cAdvisor container is
-var port string = ":6666"                    // port we will listen on
+var filter = "dummy"                  //the name of the servers the clients want to contact
+var monitor = "http://127.0.0.1:8080" // URL where the cAdvisor container is
+var port = ":6666"                    // port we will listen on
 var mapContainers = make(map[string]uint64)
 
 func updateContainers() {
@@ -26,7 +26,7 @@ func updateContainers() {
 		log.Println("Starting list of containers update...")
 		listContainers()
 		log.Println("Found", len(mapContainers), "containers")
-		log.Println("Done.\n")
+		log.Print("Done.\n")
 	}
 }
 
@@ -38,7 +38,7 @@ func listContainers() {
 	var kbFree uint64
 
 	// resetting mapContainers
-	for key, _ := range mapContainers {
+	for key := range mapContainers {
 		delete(mapContainers, key)
 	}
 
@@ -57,15 +57,11 @@ func getLessLoaded() (string, error) {
 
 	var lessLoaded string
 
-	for key, _ := range mapContainers {
-		lessLoaded = key
-		break
-	}
+	for key := range mapContainers {
 
-	for key, _ := range mapContainers {
-
-		// verifying only wanted containers
-		if mapContainers[key] < mapContainers[lessLoaded] {
+		if lessLoaded == "" {
+			lessLoaded = key
+		} else if mapContainers[key] < mapContainers[lessLoaded] {
 			lessLoaded = key
 		}
 	}
