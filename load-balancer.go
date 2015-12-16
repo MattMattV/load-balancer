@@ -22,6 +22,8 @@ var filter, monitor, port string
 var mapContainers = make(map[string]uint64)
 var mutex sync.Mutex
 
+// for every tick, will ask to update the data with the running containers
+// this method will run in background so it will not stop the HTTP server
 func updateContainers() {
 
 	listContainers()
@@ -33,6 +35,7 @@ func updateContainers() {
 	}
 }
 
+// update the mapContainers variable with containers containing the filter variable in their name
 func listContainers() {
 
 	allContainers, _ := getAllContainerInfo(monitor)
@@ -53,6 +56,7 @@ func listContainers() {
 		}
 	}
 
+	// logging for the containers in mapContainers
 	log.Println("\tFound", len(mapContainers), "containers")
 	for key, value := range mapContainers {
 		log.Printf("\t\t%s %d", key, value)
@@ -61,6 +65,7 @@ func listContainers() {
 }
 
 // determine the container with the more available RAM
+// throw an error when no servers are found
 func getLessLoaded() (string, error) {
 
 	var lessLoaded string
@@ -82,6 +87,8 @@ func getLessLoaded() (string, error) {
 	return lessLoaded, nil
 }
 
+// will write to the client the less loaded server
+// the reply will include an HTTP code between 200 (ok) and 500 (server encountered an error)
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	server, err := getLessLoaded()
 
@@ -94,6 +101,8 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(server))
 }
 
+// query cAdvisor for all the running containers on the same host
+// throw an error if cAdvisor get one, it will only log it in standard output
 func getAllContainerInfo(cadvisor string) ([]info.ContainerInfo, error) {
 
 	client, err := client.NewClient(cadvisor)
@@ -110,6 +119,7 @@ func getAllContainerInfo(cadvisor string) ([]info.ContainerInfo, error) {
 	return allContainers, nil
 }
 
+// will help to display any error
 func detectError(err error, doLog bool) bool {
 
 	if err != nil {
@@ -121,12 +131,15 @@ func detectError(err error, doLog bool) bool {
 	return false
 }
 
+// clients will be able to ask at / which server is the less loaded
 func main() {
 
+	// getting all the variables needed to run
 	filter = os.Getenv("FILTER")
 	monitor = os.Getenv("MONITOR")
 	port = os.Getenv("HTTP_PORT")
 
+	// check if all variables are set
 	if filter == "" {
 		log.Fatalln("FILTER environment variable is missing")
 	}
