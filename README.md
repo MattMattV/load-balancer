@@ -1,6 +1,6 @@
 # load-balancer (version HTTP)
 
-[![Go Report Card](http://goreportcard.com/report/Mistermatt007/load-balancer)](http://goreportcard.com/report/Mistermatt007/load-balancer)
+![Go Report Card](https://img.shields.io/badge/go%20report-A%2B-brightgreen.svg?link=http://goreportcard.com/report/MattMattV/load-balancer=http://goreportcard.com/report/MattMattV/load-balancer)
 
 Ce programme écrit en Go va récupérer l'état de tous les containers Docker sur la machine hôte *via* le container cAdvisor situé à l'adresse contenue dans la variable `monitor`.
 
