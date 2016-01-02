@@ -15,7 +15,7 @@ LRANGE_500 : 6154.22 requests per second
 LRANGE_600 : 6041.57 requests per second
 MSET       : 5249.34 requests per second
 
-withiut encapsulation
+without encapsulation
 PING_INLINE: 62932.66 requests per second
 PING_BULK  : 59417.71 requests per second
 SET        : 52410.90 requests per second
