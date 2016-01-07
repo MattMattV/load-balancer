@@ -2,7 +2,7 @@
 
 [![Go Report Card](https://img.shields.io/badge/go%20report-A%2B-brightgreen.svg?style=flat-square)](http://goreportcard.com/report/MattMattV/load-balancer)
 
-Ce programme écrit en Go va récupérer l'état de tous les containers Docker sur la machine hôte *via* le container cAdvisor situé à l'adresse contenue dans la variable `monitor`.
+Ce programme écrit en Go va récupérer l'état de tous les containers Docker sur la machine hôte *via* le container cAdvisor situé à l'adresse contenue dans la variable `MONITOR`.
 
 Il n'y a qu'un seul point d'entrée : `/`
 
